@@ -1,0 +1,47 @@
+name:                abstract-network
+version:             0.1.0.0
+github:              "sakshamsharma/abstract-network"
+license:             BSD3
+author:              "Saksham Sharma"
+maintainer:          "saksham0808@gmail.com"
+copyright:           "2018 Saksham Sharma"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/sakshamsharma/abstract-network#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- containers
+- lifted-base
+- mtl
+- threads
+- transformers
+- unagi-chan
+- unordered-containers
+
+library:
+  source-dirs: src
+  default-extensions:
+  - RecordWildCards
+
+tests:
+  abstract-network-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - abstract-network
