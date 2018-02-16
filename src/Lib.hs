@@ -20,7 +20,7 @@ createFakeNetwork addrs = do
   qs <- liftIO $ mapM (\_ -> newChan) addrs
   let inChans  = fst `map` qs
       outChans = snd `map` qs
-      nodes_   = zip addrs qs
+      nodes_   = zip addrs inChans
       uncs_    = zip addrs outChans
       fn       = FakeNetContext { nodes = H.fromList nodes_ }
       uncs     = createUnc fn `map` uncs_

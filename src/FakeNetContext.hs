@@ -16,7 +16,7 @@ import qualified Data.HashMap.Strict           as H
 import           Types
 
 data FakeNetContext =
-  FakeNetContext { nodes :: H.HashMap NetAddr (InChan NetMsg, OutChan NetMsg) }
+  FakeNetContext { nodes :: H.HashMap NetAddr (InChan NetMsg) }
 
 instance NetContext FakeNetContext where
   sendMsgInternal = fakeNetContextSend
@@ -26,5 +26,5 @@ fakeNetContextSend ctx from to msg =
   let sendToChan c = writeChan c (from, msg)
       chans        = H.lookup to (nodes ctx)
   in case chans of
-    Nothing       -> error $ "You should not be sending messages to unknown targets."
-    Just (inC, _) -> liftIO $ sendToChan inC
+    Nothing  -> error $ "You should not be sending messages to unknown targets."
+    Just inC -> liftIO $ sendToChan inC
