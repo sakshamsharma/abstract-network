@@ -1,10 +1,8 @@
 module Lib where
 
 
-import           Control.Monad.State.Strict
-
 import           Control.Concurrent.Chan.Unagi
-
+import           Control.Monad.State.Strict
 import qualified Data.HashMap.Strict           as H
 
 import           FakeNetContext
@@ -17,12 +15,12 @@ createUnc ctx (addr, outChan) =
                  , selfAddr = addr
                  }
 
-createFakeNetwork :: MonadIO m => [NetAddr] -> IO [UserNetContext m]
+createFakeNetwork :: MonadIO m => [NetAddr] -> m [UserNetContext m]
 createFakeNetwork addrs = do
-  qs <- mapM (\_ -> newChan) addrs
+  qs <- liftIO $ mapM (\_ -> newChan) addrs
   let inChans  = fst `map` qs
       outChans = snd `map` qs
-      nodes_   = zip addrs inChans
+      nodes_   = zip addrs qs
       uncs_    = zip addrs outChans
       fn       = FakeNetContext { nodes = H.fromList nodes_ }
       uncs     = createUnc fn `map` uncs_

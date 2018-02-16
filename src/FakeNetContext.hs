@@ -16,7 +16,7 @@ import qualified Data.HashMap.Strict           as H
 import           Types
 
 data FakeNetContext =
-  FakeNetContext { nodes :: H.HashMap NetAddr (InChan NetMsg) }
+  FakeNetContext { nodes :: H.HashMap NetAddr (InChan NetMsg, OutChan NetMsg) }
 
 instance NetContext FakeNetContext where
   sendMsgInternal = fakeNetContextSend
@@ -24,7 +24,7 @@ instance NetContext FakeNetContext where
 fakeNetContextSend :: MonadIO m => FakeNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 fakeNetContextSend ctx from to msg =
   let sendToChan c = writeChan c (from, msg)
-      sending      = sendToChan <$> H.lookup to (nodes ctx)
-  in case sending of
-       Nothing -> error "SHIT"
-       Just _  -> return ()
+      chans        = H.lookup to (nodes ctx)
+  in case chans of
+    Nothing       -> error $ "You should not be sending messages to unknown targets."
+    Just (inC, _) -> liftIO $ sendToChan inC

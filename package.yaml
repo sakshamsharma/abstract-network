@@ -23,8 +23,10 @@ dependencies:
 - base >= 4.7 && < 5
 - bytestring
 - containers
+- hspec
 - lifted-base
 - mtl
+- random
 - threads
 - transformers
 - unagi-chan
