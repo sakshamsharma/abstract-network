@@ -21,7 +21,7 @@ data FakeNetContext =
 instance NetContext FakeNetContext where
   sendMsgInternal = fakeNetContextSend
 
-fakeNetContextSend :: FakeNetContext -> NetAddr -> NetAddr -> B.ByteString -> IO ()
+fakeNetContextSend :: MonadIO m => FakeNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 fakeNetContextSend ctx from to msg =
   let sendToChan c = writeChan c (from, msg)
       sending      = sendToChan <$> H.lookup to (nodes ctx)

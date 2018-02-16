@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types            #-}
 
 module Types where
 
@@ -17,10 +18,10 @@ type NetAddr = (String, Int)
 type NetMsg  = (NetAddr, B.ByteString)
 
 class NetContext t where
-  sendMsgInternal :: t -> NetAddr -> NetAddr -> B.ByteString -> IO ()
+  sendMsgInternal :: MonadIO m => t -> NetAddr -> NetAddr -> B.ByteString -> m ()
 
-data UserNetContext =
-  UserNetContext { sendMsg  :: NetAddr -> B.ByteString -> IO ()
+data UserNetContext m =
+  UserNetContext { sendMsg  :: MonadIO m => NetAddr -> B.ByteString -> m ()
                  , msgQueue :: OutChan NetMsg
                  , selfAddr :: NetAddr
                  }
