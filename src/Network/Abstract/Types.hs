@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types            #-}
 
-module Types where
+module Network.Abstract.Types where
 
 
 import           Control.Monad.State.Strict

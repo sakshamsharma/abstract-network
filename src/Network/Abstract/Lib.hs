@@ -1,12 +1,13 @@
-module Lib where
+module Network.Abstract.Lib ( createFakeNetwork
+                            ) where
 
 
 import           Control.Concurrent.Chan.Unagi
 import           Control.Monad.State.Strict
-import qualified Data.HashMap.Strict           as H
+import qualified Data.HashMap.Strict             as H
 
-import           FakeNetContext
-import           Types
+import           Network.Abstract.FakeNetContext
+import           Network.Abstract.Types
 
 createUnc :: (MonadIO m, NetContext t) => t -> (NetAddr, OutChan NetMsg) -> UserNetContext m
 createUnc ctx (addr, outChan) =

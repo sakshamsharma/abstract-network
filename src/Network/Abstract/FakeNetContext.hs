@@ -1,7 +1,8 @@
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module FakeNetContext where
+module Network.Abstract.FakeNetContext ( FakeNetContext(..)
+                                       ) where
 
 
 import           Control.Monad.State.Strict
@@ -13,7 +14,7 @@ import           Control.Concurrent.MVar
 import qualified Data.ByteString               as B
 import qualified Data.HashMap.Strict           as H
 
-import           Types
+import           Network.Abstract.Types
 
 data FakeNetContext =
   FakeNetContext { nodes :: H.HashMap NetAddr (InChan NetMsg) }

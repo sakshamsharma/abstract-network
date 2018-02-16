@@ -7,8 +7,8 @@ import           Control.Concurrent.Chan.Unagi
 import           Control.Monad.State.Strict
 import qualified Data.ByteString.Char8         as C
 
-import           Lib
-import           Types
+import           Network.Abstract.Lib
+import           Network.Abstract.Types
 
 getRandomInt :: Int -> Int -> IO Int
 getRandomInt mi ma = randomRIO (mi, ma)
