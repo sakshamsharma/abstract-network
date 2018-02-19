@@ -21,8 +21,12 @@ getRandomElement l = do
 main :: IO ()
 main = do
   ports <- mapM (\_ -> getRandomInt 2000 7000) [0..10]
-  let addrs = map (\p -> ("localhost", p)) ports
-  spec addrs
+  let addrs = map (\p -> ("127.0.0.1", p)) ports
+      paddrs = mapM simpleAddrToNetAddr addrs
+  bb <- case paddrs of
+    Left err -> error err
+    Right x  -> return x
+  spec bb
 
 spec :: [NetAddr] -> IO ()
 spec addrs = hspec $ do
