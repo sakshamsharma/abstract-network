@@ -1,7 +1,10 @@
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Network.Abstract.Types ( NetAddr(..)
@@ -19,12 +22,16 @@ import           Control.Concurrent.MVar
 import           Control.Monad.State.Strict
 import           Control.Monad.Trans.Except
 import           Crypto.Hash
+import qualified Crypto.Number.Basic           as CNB
+import qualified Crypto.Number.Serialize       as CNS
 import qualified Data.ByteString               as B
 import qualified Data.ByteString.Char8         as C
 import qualified Data.Hashable                 as HASH
 import qualified Data.HashMap.Strict           as H
 import           Data.IP
+import           Data.Serialize                as S
 import           Data.Word
+import           GHC.Generics                  (Generic)
 import           Safe
 
 import           Network.Socket
@@ -42,10 +49,40 @@ hashToInt b =
 type NetAddr = SockAddr
 type NetMsg  = (NetAddr, B.ByteString)
 
+deriving instance Read NetAddr
+deriving instance Generic NetAddr
+
+instance Serialize PortNumber where
+  put = putPort
+  get = getPort
+
+putPort :: Putter PortNumber
+putPort port =
+  let port_ = fromIntegral port :: Int
+  in S.put port_
+
+getPort :: Get PortNumber
+getPort = S.get
+
+instance Serialize NetAddr where
+  put = putNetAddr
+  get = getNetAddr
+
+putNetAddr :: Putter NetAddr
+putNetAddr (SockAddrInet port host) = do
+  S.put port
+  S.put host
+
+getNetAddr :: Get NetAddr
+getNetAddr = do
+  port <- S.get
+  host <- S.get
+  return $ SockAddrInet port host
+
 simpleAddrToNetAddr :: (String, Int) -> Either String NetAddr
-simpleAddrToNetAddr (shost, iport) = do
+simpleAddrToNetAddr (shost, iport) =
   let port_ = fromIntegral iport :: PortNumber
-  case (readMay shost :: Maybe IPv4) of
+  in case (readMay shost :: Maybe IPv4) of
     Nothing -> Left "Could not parse string address"
     Just ipHost ->
       let host_ = toHostAddress ipHost
