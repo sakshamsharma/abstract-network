@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
 
 module Network.Abstract.TCPNetContext where
 
@@ -12,16 +13,19 @@ import           Data.Bits
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8      as C
 import qualified Data.HashMap.Strict        as H
+import           Data.Int                   (Int32)
 import           Data.List
+import           Data.Serialize
 import           Network.Abstract.Types
 import           Network.Socket
 import qualified Network.Socket.ByteString  as NSB
+import           Text.Read
 
 runThread action = do
   (_, w) <- Thread.forkIO action
   return w
 
-data TCPNetContext = TCPNetContext NetAddr ((NetAddr, B.ByteString) -> IO B.ByteString)
+data TCPNetContext = TCPNetContext NetAddr (UserNetHandler B.ByteString)
 
 instance NetContext TCPNetContext where
   sendMsgInternal = tcpNetContextSend
@@ -33,17 +37,29 @@ createConnectedTCPSocket to = liftIO $ do
   connect sock to
   return sock
 
+sendMsgWithLen :: MonadIO m => Socket -> B.ByteString -> m ()
+sendMsgWithLen sock msg = do
+  let mlen :: Int32 = fromIntegral $ B.length msg
+      lenBytes = intToBytes $ fromIntegral mlen
+  liftIO $ NSB.sendAll sock $ C.concat [lenBytes, msg]
+
+recvMsgWithLen :: MonadIO m => Socket -> m B.ByteString
+recvMsgWithLen conn = liftIO $ do
+  rawmsglen <- NSB.recv conn 4
+  let msglen = bytesToInt rawmsglen
+  NSB.recv conn msglen
+
 tcpNetContextSend :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 tcpNetContextSend ctx from to msg = liftIO $ do
   sock <- createConnectedTCPSocket to
-  NSB.sendAll sock msg
+  sendMsgWithLen sock $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
   close sock
 
 tcpNetContextReply :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m B.ByteString
 tcpNetContextReply ctx from to msg = liftIO $ do
   sock <- createConnectedTCPSocket to
-  NSB.sendAll sock msg
-  msg <- NSB.recv sock 0
+  sendMsgWithLen sock $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
+  msg <- recvMsgWithLen sock
   close sock
   return msg
 
@@ -68,10 +84,20 @@ server (TCPNetContext (SockAddrInet port _) handler) = do
   close sock
     where procMessages sock = do
             (conn, addr) <- accept sock
-            msg <- NSB.recv conn 0
-            reply <- handler (addr, msg)
-            unless (B.null reply) $ NSB.sendAll conn reply
-            close conn
+            rawmsg <- recvMsgWithLen conn
+
+            let result = do
+                  parsedMsg <- readEither . C.unpack $ rawmsg
+                  addr <- stringToNetAddr $ senderaddr parsedMsg
+                  return (addr, basemsg parsedMsg)
+
+            case result of
+              Left err  -> putStrLn $ "Error: " ++ err
+              Right res -> do
+                resp <- handler res
+                unless (B.null resp) $ sendMsgWithLen conn resp
+                close sock
+
             procMessages sock
 
 tcpNetContextListen :: TCPNetContext -> IO ()

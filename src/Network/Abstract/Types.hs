@@ -11,8 +11,14 @@ module Network.Abstract.Types ( NetAddr(..)
                               , NetContext(..)
                               , UserNetContext(..)
                               , UserNetHandler
+                              , MsgWithAddr(..)
+                              , putNetAddr
+                              , getNetAddr
                               , simpleAddrToNetAddr
+                              , stringToNetAddr
                               , hostAddressToTuple
+                              , intToBytes
+                              , bytesToInt
                               , tupleToHostAddress
                               ) where
 
@@ -29,12 +35,13 @@ import qualified Data.ByteString.Char8         as C
 import qualified Data.Hashable                 as HASH
 import qualified Data.HashMap.Strict           as H
 import           Data.IP
+import           Data.List.Split
 import           Data.Serialize                as S
 import           Data.Word
 import           GHC.Generics                  (Generic)
-import           Safe
-
 import           Network.Socket
+import           Safe
+import           Text.Read
 
 customHash :: Show a => a -> B.ByteString
 customHash x = C.pack $ show ((hash $ C.pack $ show x) :: Digest SHA3_512)
@@ -79,6 +86,15 @@ getNetAddr = do
   host <- S.get
   return $ SockAddrInet port host
 
+stringToNetAddr :: String -> Either String NetAddr
+stringToNetAddr str = do
+  let x = splitOn ":" str
+  (h, pt) <- case x of
+    [h,pt] -> Right(h, pt)
+    _      -> Left "Bad format for string"
+  port <- readEither pt
+  simpleAddrToNetAddr (h, port)
+
 simpleAddrToNetAddr :: (String, Int) -> Either String NetAddr
 simpleAddrToNetAddr (shost, iport) =
   let port_ = fromIntegral iport :: PortNumber
@@ -87,6 +103,19 @@ simpleAddrToNetAddr (shost, iport) =
     Just ipHost ->
       let host_ = toHostAddress ipHost
       in Right $ SockAddrInet port_ host_
+
+intToBytes :: Int -> B.ByteString
+intToBytes i =
+  let i1 = i `mod` 256
+      i2 = ((i-i1) `div` 256) `mod` 256
+      i3 = ((i-i2) `div` 256) `mod` 256
+      i4 = ((i-i3) `div` 256) `mod` 256
+  in B.pack [fromIntegral i4, fromIntegral i3, fromIntegral i2, fromIntegral i1]
+
+bytesToInt :: B.ByteString -> Int
+bytesToInt = helper . B.unpack
+  where helper [i4, i3, i2, i1] =
+          fromIntegral i1 + 256 * (fromIntegral i2 + 256 * (fromIntegral i3 + 256 * fromIntegral i4))
 
 instance HASH.Hashable NetAddr where
   hashWithSalt salt addr =
@@ -102,4 +131,8 @@ data UserNetContext =
                  , selfAddr :: NetAddr
                  }
 
-type UserNetHandler = (NetAddr, B.ByteString) -> IO B.ByteString
+type UserNetHandler ret = (NetAddr, B.ByteString) -> IO ret
+
+data MsgWithAddr = MsgWithAddr { basemsg    :: B.ByteString
+                               , senderaddr :: String
+                               } deriving (Show, Read)

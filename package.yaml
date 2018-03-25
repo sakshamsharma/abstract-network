@@ -33,6 +33,7 @@ dependencies:
 - network
 - random
 - safe
+- split
 - threads
 - transformers
 - unagi-chan
