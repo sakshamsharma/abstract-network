@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -26,10 +27,11 @@ runThread action = do
   (_, w) <- Thread.forkIO action
   return w
 
-data UDPNetContext = UDPNetContext NetAddr (InChan NetMsg)
+data UDPNetContext = UDPNetContext NetAddr Handler
 
 instance NetContext UDPNetContext where
   sendMsgInternal = udpNetContextSend
+  getReplyInternal = undefined
 
 udpNetContextSend :: MonadIO m => UDPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 udpNetContextSend ctx from to msg = liftIO $ do
@@ -38,7 +40,8 @@ udpNetContextSend ctx from to msg = liftIO $ do
   NSB.sendAll sock msg
   close sock
 
-server (UDPNetContext (SockAddrInet port _) inchan) = do
+server :: UDPNetContext -> IO ()
+server (UDPNetContext (SockAddrInet port _) handler) = do
   addrinfos <- getAddrInfo
                (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
                Nothing (Just . show . fromIntegral $ port)
@@ -62,8 +65,7 @@ server (UDPNetContext (SockAddrInet port _) inchan) = do
                  handlerfunc addr msg
                  -- And process more messages
                  procMessages sock
-          handlerfunc addr msg = do
-            writeChan inchan (addr, msg)
+          handlerfunc addr msg = handler (addr, msg)
 
 udpNetContextListen :: UDPNetContext -> IO ()
 udpNetContextListen ctx = do

@@ -94,9 +94,12 @@ instance HASH.Hashable NetAddr where
 
 class NetContext t where
   sendMsgInternal :: MonadIO m => t -> NetAddr -> NetAddr -> B.ByteString -> m ()
+  getReplyInternal :: MonadIO m => t -> NetAddr -> NetAddr -> B.ByteString -> m B.ByteString
 
-data UserNetContext m =
-  UserNetContext { sendMsg  :: MonadIO m => NetAddr -> B.ByteString -> m ()
-                 , msgQueue :: OutChan NetMsg
+data UserNetContext =
+  UserNetContext { sendMsg  :: NetAddr -> B.ByteString -> IO ()
+                 , getReply :: NetAddr -> B.ByteString -> IO B.ByteString
                  , selfAddr :: NetAddr
                  }
+
+type Handler = (NetAddr, B.ByteString) -> IO B.ByteString
