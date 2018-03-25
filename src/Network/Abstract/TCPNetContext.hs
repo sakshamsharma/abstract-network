@@ -38,11 +38,15 @@ createConnectedTCPSocket to = liftIO $ do
   connect sock to
   return sock
 
-sendMsgWithLen :: MonadIO m => Socket -> B.ByteString -> m ()
-sendMsgWithLen sock msg = do
+sendMsgWithLen :: MonadIO m => Socket -> NetAddr -> B.ByteString -> m ()
+sendMsgWithLen sock to msg = do
   let mlen :: Int32 = fromIntegral $ B.length msg
       lenBytes = intToBytes $ fromIntegral mlen
-  liftIO $ NSB.sendAll sock $ C.concat [lenBytes, msg]
+  liftIO $ do
+    result :: Either IOException () <- try (NSB.sendAll sock $ C.concat [lenBytes, msg])
+    case result of
+      Left exp -> putStrLn $ "Error sending message to " ++ show to ++ ": " ++ displayException exp
+      Right _  -> return ()
 
 recvMsgWithLen :: MonadIO m => Socket -> m B.ByteString
 recvMsgWithLen conn = liftIO $ do
@@ -53,13 +57,13 @@ recvMsgWithLen conn = liftIO $ do
 tcpNetContextSend :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 tcpNetContextSend ctx from to msg = liftIO $ do
   sock <- createConnectedTCPSocket to
-  sendMsgWithLen sock $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
+  sendMsgWithLen sock to $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
   close sock
 
 tcpNetContextReply :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m B.ByteString
 tcpNetContextReply ctx from to msg = liftIO $ do
   sock <- createConnectedTCPSocket to
-  sendMsgWithLen sock $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
+  sendMsgWithLen sock to $ C.pack . show $ MsgWithAddr { basemsg = msg, senderaddr = show from }
   msg <- recvMsgWithLen sock
   close sock
   return msg
@@ -99,12 +103,16 @@ server (TCPNetContext (SockAddrInet port _) handler) = do
               Left err  -> putStrLn $ "Error: " ++ err
               Right res -> do
                 resp <- handler res
-                unless (B.null resp) $ sendMsgWithLen conn resp
+                unless (B.null resp) $ sendMsgWithLen conn addr resp
                 close conn
 
             procMessages sock
 
 tcpNetContextListen :: TCPNetContext -> IO ()
 tcpNetContextListen ctx = do
-  runThread $ server ctx
+  runThread $ do
+    result :: Either IOException () <- try (server ctx)
+    case result of
+      Left err -> putStrLn $ "Could not start server: " ++ displayException err
+      Right _  -> return ()
   return ()
