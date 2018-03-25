@@ -119,10 +119,15 @@ spec = hspec $ do
       receiver <- getRandomElement uncs
       let sAddr = selfAddr sender
           rAddr = selfAddr receiver
-          msg   = "test message"
 
       threadDelay 200000
-      rep <- getReply sender rAddr (C.pack msg)
+      rep <- getReply sender rAddr (C.pack "test message")
       threadDelay 200000
 
       rep `shouldBe` C.pack "reply test"
+
+      threadDelay 200000
+      rep2 <- getReply sender rAddr (C.pack "test message 2")
+      threadDelay 200000
+
+      rep2 `shouldBe` C.pack "reply test"

@@ -1,6 +1,4 @@
-module Network.Abstract.Lib ( createUDPNode
-                            , createTCPNode
-                            ) where
+module Network.Abstract.Lib where
 
 
 import           Control.Concurrent.Chan.Unagi

@@ -7,6 +7,7 @@ module Network.Abstract.TCPNetContext where
 
 import           Control.Concurrent.MVar
 import qualified Control.Concurrent.Thread  as Thread
+import           Control.Exception
 import           Control.Monad.State.Strict
 import           Control.Monad.Trans.Except
 import           Data.Bits
@@ -80,7 +81,10 @@ server (TCPNetContext (SockAddrInet port _) handler) = do
   listen sock 50
 
   -- Loop forever processing incoming data.  Ctrl-C to abort.
-  procMessages sock
+  result :: Either IOException () <- try (procMessages sock)
+  case result of
+    Left err -> putStrLn $ "Error occured in TCP server: " ++ displayException err
+    Right x  -> return ()
   close sock
     where procMessages sock = do
             (conn, addr) <- accept sock
@@ -96,7 +100,7 @@ server (TCPNetContext (SockAddrInet port _) handler) = do
               Right res -> do
                 resp <- handler res
                 unless (B.null resp) $ sendMsgWithLen conn resp
-                close sock
+                close conn
 
             procMessages sock
 
