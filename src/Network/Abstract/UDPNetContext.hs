@@ -5,21 +5,17 @@
 module Network.Abstract.UDPNetContext where
 
 
-import           Control.Monad.State.Strict
-import           Control.Monad.Trans.Except
-
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import qualified Control.Concurrent.Thread     as Thread
-
+import           Control.Monad.State.Strict
+import           Control.Monad.Trans.Except
+import           Data.Bits
 import qualified Data.ByteString               as B
 import qualified Data.ByteString.Char8         as C
 import qualified Data.HashMap.Strict           as H
-
-import           Network.Abstract.Types
-
-import           Data.Bits
 import           Data.List
+import           Network.Abstract.Types
 import           Network.Socket
 import qualified Network.Socket.ByteString     as NSB
 
@@ -27,7 +23,7 @@ runThread action = do
   (_, w) <- Thread.forkIO action
   return w
 
-data UDPNetContext = UDPNetContext NetAddr Handler
+data UDPNetContext = UDPNetContext NetAddr UserNetHandler
 
 instance NetContext UDPNetContext where
   sendMsgInternal = udpNetContextSend

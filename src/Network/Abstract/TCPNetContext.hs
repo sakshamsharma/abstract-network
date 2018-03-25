@@ -23,43 +23,45 @@ runThread action = do
 
 data TCPNetContext = TCPNetContext NetAddr ((NetAddr, B.ByteString) -> IO B.ByteString)
 
--- instance NetContext TCPNetContext where
---   sendMsgInternal = tcpNetContextSend
---   getReplyInternal = undefined
+instance NetContext TCPNetContext where
+  sendMsgInternal = tcpNetContextSend
+  getReplyInternal = undefined
 
--- tcpNetContextSend :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
--- tcpNetContextSend ctx from to msg = liftIO $ do
---   sock <- socket AF_INET Datagram defaultProtocol
---   connect sock to
---   NSB.sendAll sock msg
---   close sock
+tcpNetContextSend :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
+tcpNetContextSend ctx from to msg = liftIO $ do
+  sock <- socket AF_INET Stream defaultProtocol
+  connect sock to
+  NSB.sendAll sock msg
+  close sock
 
--- server :: TCPNetContext -> IO ()
--- server (TCPNetContext (SockAddrInet port _) handler) = do
---   addrinfos <- getAddrInfo
---                (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
---                Nothing (Just . show . fromIntegral $ port)
---   let serveraddr = head addrinfos
+server :: TCPNetContext -> IO ()
+server (TCPNetContext (SockAddrInet port _) handler) = do
+  addrinfos <- getAddrInfo
+               (Just (defaultHints {addrFlags = [AI_PASSIVE]}))
+               Nothing (Just . show . fromIntegral $ port)
+  let serveraddr = head addrinfos
 
---   -- Create a socket
---   sock <- socket (addrFamily serveraddr) Stream 0
+  -- Create a socket
+  sock <- socket (addrFamily serveraddr) Stream defaultProtocol
 
---   -- Bind it to the address we're listening to
---   bind sock (addrAddress serveraddr)
+  -- Bind it to the address we're listening to
+  bind sock (addrAddress serveraddr)
 
---   listen sock 50
+  -- 50 max connections
+  listen sock 50
 
---   -- Loop forever processing incoming data.  Ctrl-C to abort.
---   procMessages sock
---   close sock
---     where procMessages sock =
---               do
---                 (sock, addr) <- accept sock
---                 handlerfunc addr msg
---                 procMessages sock
---           handlerfunc addr msg = handler (addr, msg)
+  -- Loop forever processing incoming data.  Ctrl-C to abort.
+  procMessages sock
+  close sock
+    where procMessages sock =
+              do
+                (sock, addr) <- accept sock
+                msg <- NSB.recv sock 0
+                handlerfunc addr msg
+                procMessages sock
+          handlerfunc addr msg = handler (addr, msg)
 
--- tcpNetContextListen :: TCPNetContext -> IO ()
--- tcpNetContextListen ctx = do
---   runThread $ server ctx
---   return ()
+tcpNetContextListen :: TCPNetContext -> IO ()
+tcpNetContextListen ctx = do
+  runThread $ server ctx
+  return ()

@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -11,6 +10,7 @@ module Network.Abstract.Types ( NetAddr(..)
                               , NetMsg(..)
                               , NetContext(..)
                               , UserNetContext(..)
+                              , UserNetHandler
                               , simpleAddrToNetAddr
                               , hostAddressToTuple
                               , tupleToHostAddress
@@ -102,4 +102,4 @@ data UserNetContext =
                  , selfAddr :: NetAddr
                  }
 
-type Handler = (NetAddr, B.ByteString) -> IO B.ByteString
+type UserNetHandler = (NetAddr, B.ByteString) -> IO B.ByteString
