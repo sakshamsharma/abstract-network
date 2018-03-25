@@ -27,7 +27,7 @@ data UDPNetContext = UDPNetContext NetAddr UserNetHandler
 
 instance NetContext UDPNetContext where
   sendMsgInternal = udpNetContextSend
-  getReplyInternal = undefined
+  getReplyInternal = error "getReply is not yet supported on UDP nodes"
 
 udpNetContextSend :: MonadIO m => UDPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 udpNetContextSend ctx from to msg = liftIO $ do

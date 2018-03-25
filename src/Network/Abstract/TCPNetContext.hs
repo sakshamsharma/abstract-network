@@ -25,14 +25,27 @@ data TCPNetContext = TCPNetContext NetAddr ((NetAddr, B.ByteString) -> IO B.Byte
 
 instance NetContext TCPNetContext where
   sendMsgInternal = tcpNetContextSend
-  getReplyInternal = undefined
+  getReplyInternal = tcpNetContextReply
+
+createConnectedTCPSocket :: MonadIO m => NetAddr -> m Socket
+createConnectedTCPSocket to = liftIO $ do
+  sock <- socket AF_INET Stream defaultProtocol
+  connect sock to
+  return sock
 
 tcpNetContextSend :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m ()
 tcpNetContextSend ctx from to msg = liftIO $ do
-  sock <- socket AF_INET Stream defaultProtocol
-  connect sock to
+  sock <- createConnectedTCPSocket to
   NSB.sendAll sock msg
   close sock
+
+tcpNetContextReply :: MonadIO m => TCPNetContext -> NetAddr -> NetAddr -> B.ByteString -> m B.ByteString
+tcpNetContextReply ctx from to msg = liftIO $ do
+  sock <- createConnectedTCPSocket to
+  NSB.sendAll sock msg
+  msg <- NSB.recv sock 0
+  close sock
+  return msg
 
 server :: TCPNetContext -> IO ()
 server (TCPNetContext (SockAddrInet port _) handler) = do
@@ -53,13 +66,13 @@ server (TCPNetContext (SockAddrInet port _) handler) = do
   -- Loop forever processing incoming data.  Ctrl-C to abort.
   procMessages sock
   close sock
-    where procMessages sock =
-              do
-                (sock, addr) <- accept sock
-                msg <- NSB.recv sock 0
-                handlerfunc addr msg
-                procMessages sock
-          handlerfunc addr msg = handler (addr, msg)
+    where procMessages sock = do
+            (conn, addr) <- accept sock
+            msg <- NSB.recv conn 0
+            reply <- handler (addr, msg)
+            unless (B.null reply) $ NSB.sendAll conn reply
+            close conn
+            procMessages sock
 
 tcpNetContextListen :: TCPNetContext -> IO ()
 tcpNetContextListen ctx = do
