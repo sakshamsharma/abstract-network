@@ -1,10 +1,7 @@
 module Network.Abstract.Lib where
 
-
-import           Control.Concurrent.Chan.Unagi
 import           Control.Monad.State.Strict
 import qualified Data.ByteString                as B
-import qualified Data.HashMap.Strict            as H
 import           Network.Abstract.TCPNetContext
 import           Network.Abstract.Types
 import           Network.Abstract.UDPNetContext
