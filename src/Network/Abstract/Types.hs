@@ -1,9 +1,7 @@
-{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE StandaloneDeriving    #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
 
 module Network.Abstract.Types ( NetAddr(..)
@@ -38,7 +36,6 @@ import           Data.IP
 import           Data.List.Split
 import           Data.Serialize                as S
 import           Data.Word
-import           GHC.Generics                  (Generic)
 import           Network.Socket
 import           Safe
 import           Text.Read
@@ -56,10 +53,13 @@ hashToInt b =
 type NetAddr = SockAddr
 type NetMsg  = (NetAddr, B.ByteString)
 
--- TODO: Read instance is wrong, and thus, doesn't work.
--- This is because the Show instance gives a fancy printed output.
-deriving instance Read NetAddr
-deriving instance Generic NetAddr
+-- We need to support parsing list of addresses.
+instance Read NetAddr where
+  readsPrec _ x =
+    let basicStr = takeWhile (\a -> a /= ',' && a /= ' ' && a /= ']') x
+    in case stringToNetAddr basicStr of
+        Left err  -> []
+        Right res -> [(res, drop (length basicStr) x)]
 
 instance Serialize PortNumber where
   put = putPort
