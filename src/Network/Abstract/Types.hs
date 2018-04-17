@@ -56,6 +56,8 @@ hashToInt b =
 type NetAddr = SockAddr
 type NetMsg  = (NetAddr, B.ByteString)
 
+-- TODO: Read instance is wrong, and thus, doesn't work.
+-- This is because the Show instance gives a fancy printed output.
 deriving instance Read NetAddr
 deriving instance Generic NetAddr
 
